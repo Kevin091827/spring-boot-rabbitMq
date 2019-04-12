@@ -1,5 +1,6 @@
 package com.kevin.springboot_mq.message;
 
+import com.kevin.springboot_mq.config.direct.DirectKeyInterface;
 import com.kevin.springboot_mq.config.topic.TopicKeyInterface;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitHandler;
@@ -29,7 +30,8 @@ public class Consumer {
      * @param message
      */
     @RabbitHandler
-    @RabbitListener(queues = TopicKeyInterface.TOPIC_QUEUE_NAME_A)
+    //@RabbitListener(queues = TopicKeyInterface.TOPIC_QUEUE_NAME_A)
+    @RabbitListener(queues = DirectKeyInterface.DIRECT_QUEUE_NAME)
     public void recevice(String message){
         log.info("接收到消息：{}",message);
     }
