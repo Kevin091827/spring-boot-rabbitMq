@@ -23,7 +23,7 @@ import org.springframework.stereotype.Component;
 public class Consumer {
 
     @Autowired
-    private RabbitTemplate amqpTemplate;
+    private RabbitTemplate rabbitTemplate;
 
     /**
      * 接收消息（自动监听）

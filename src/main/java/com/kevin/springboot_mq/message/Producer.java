@@ -22,15 +22,17 @@ import org.springframework.stereotype.Component;
 public class Producer {
 
     @Autowired
-    private RabbitTemplate amqpTemplate;
+    private RabbitTemplate rabbitTemplate;
 
     /**
      * 消息发送(点对点）
      * @param message
      */
     public void send(String message){
-       amqpTemplate.convertAndSend(DirectKeyInterface.DIRECT_EXCHANGE_NAME,DirectKeyInterface.DIRECT_KEY,message);
-       log.info("消息发送成功：{}",message);
+        //rabbitTemplate.convertAndSend(DirectKeyInterface.DIRECT_EXCHANGE_NAME,DirectKeyInterface.DIRECT_KEY,message);
+       // rabbitTemplate.convertAndSend(DirectKeyInterface.DIRECT_EXCHANGE_NAME,"test",message);
+        //rabbitTemplate.convertAndSend("test","test",message);
+        log.info("消息发送成功：{}",message);
     }
 
     /**
@@ -38,7 +40,7 @@ public class Producer {
      * @param message
      */
     public void sendOfFanout(String message){
-        amqpTemplate.convertAndSend(FanoutKeyInterface.FANOUT_EXCHANGE_NAME,FanoutKeyInterface.FANOUT_KEY,message);
+        rabbitTemplate.convertAndSend(FanoutKeyInterface.FANOUT_EXCHANGE_NAME,FanoutKeyInterface.FANOUT_KEY,message);
         log.info("消息发送成功：{}",message);
     }
 
@@ -47,7 +49,7 @@ public class Producer {
      * @param message
      */
     public void sendOfTopic(String message){
-        amqpTemplate.convertAndSend(TopicKeyInterface.TOPIC_EXCHANGE_NAME,TopicKeyInterface.TOPIC_KEY,message);
+        rabbitTemplate.convertAndSend(TopicKeyInterface.TOPIC_EXCHANGE_NAME,TopicKeyInterface.TOPIC_KEY,message);
         log.info("消息发送成功：{}",message);
     }
 
