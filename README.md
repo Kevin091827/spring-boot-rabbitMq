@@ -153,17 +153,57 @@ spring.rabbitmq.cache.connection.mode=channel
 --------------------------------------------------更新----------------------------------------------
 
 #### 4.rabbitMQ消息确认机制
-当我们程序向rabbitMQ中间件发送消息时，如果程序没什么异常的话，一般都会成功发送消息
-但是，我们并不知道，消息是否成功发送到相应交换机的相应队列中，此时，我们需要用到消息确认机制，
-这也是rabbitMQ的一个功能点
+
+* **为什么要进行消息确认？**
+    
+    发送者在发送消息后，无法确认消息是否真正发送到相应交换机中
+    ，如果消费者将消息发送到正确的交换机上，但是路由不到正确的队列，而消费者也无法保证能正确从队列中获取到相应的消息
+    ，rabbitMQ默认是没有反馈的，所以我们需要确认消息是否真正到达
+    
+* **消息确认机制实现方式**
+
+    **1. AMQP事务机制**
+    
+    --- txSelect:  用户当前channel设置成事务模式
+    
+    --- txCommit:  提交事务
+    
+    --- txRollback:  回滚事务
+    
+    此种方式很耗时，降低了消息的吞吐量
+    
+    **2. Confirm模式**
+    
+    生产者将channel设置成Confirm模式，该channel上的消息都会被
+    指派一个id来表示消息，一旦消息被发送到相应的队列之后，broker
+    就会发生一个确认消息（包含消息id）给生产者，如果消息和队列是可持久化的
+    ，那么确认消息是在消息写入磁盘后发送，
+    
+    最大好处：异步处理
+    
+    confirmSelect 模式：
+    
+    ---普通
+    
+        每发送一条消息就执行一次waitForConfirm()
+   
+    ---批量
+    
+        发送多条消息后在执行waitForConfirm()
+    
+    ---异步 
+    
+        提供一个回调方法来实现消息确认confirmListener()
+    
+        
 
 **1.消息发送确认 与 消息接收确认（ACK）**
-* 消息发送确认：
+* **消息发送确认：**
    
    当消息可能因为路由键不匹配或者发送不到指定交换机而导致无法发送到相应队列时
    确认消息发送失败，相反，确认消息发送成功
 
-* 消息接收确认：
+* **消息接收确认：**
     
     1.消息通过 ACK 确认是否被正确接收，每个 Message 都要被确认（acknowledged），可以手动去 ACK 或自动 ACK
     
@@ -275,8 +315,10 @@ public class RabbitReturnCallback implements RabbitTemplate.ReturnCallback {
  
  #### 5.rabbitMQ消息持久化机制
  
-为了保证消息的可靠性，需要对消息进行持久化。 
+为了保证消息的可靠性，需要对消息进行持久化。解决rabbitMQ服务器异常导致数据丢失
+
 为了保证RabbitMQ在重启、奔溃等异常情况下数据没有丢失，除了对消息本身持久化为，还需要将消息传输经过的队列(queue)，交互机进行持久化(exchange)，持久化以上元素后，消息才算真正RabbitMQ重启不会丢失。
+
 
 >详细参数：
 
@@ -313,4 +355,6 @@ public class RabbitReturnCallback implements RabbitTemplate.ReturnCallback {
             return new TopicExchange(TopicKeyInterface.TOPIC_DURABLE_QUEUE_NAME,true,false);
         }
 ```
+
+
 

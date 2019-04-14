@@ -36,6 +36,8 @@ public class RabbitMqConfig  {
     @PostConstruct
     public void initRabbitTemplate(){
 
+        //可针对每次请求的消息去确定’mandatory’的boolean值
+        rabbitTemplate.setMandatory(true);
         rabbitTemplate.setConfirmCallback(new RabbitConfirmCallback());
         rabbitTemplate.setReturnCallback(new RabbitReturnCallback());
     }

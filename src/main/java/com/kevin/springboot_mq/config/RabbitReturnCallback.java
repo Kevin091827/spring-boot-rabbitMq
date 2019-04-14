@@ -19,11 +19,11 @@ public class RabbitReturnCallback implements RabbitTemplate.ReturnCallback {
     /**
      * 发送到队列失败后回调
      * 消息可以发送到相应交换机，但是没有相应路由键和队列绑定
-     * @param message
-     * @param i
-     * @param s
-     * @param s1
-     * @param s2
+     * @param message   返回消息
+     * @param i         返回状态码
+     * @param s         回复文本
+     * @param s1        交换机
+     * @param s2        路由键
      */
     @Override
     public void returnedMessage(Message message, int i, String s, String s1, String s2) {

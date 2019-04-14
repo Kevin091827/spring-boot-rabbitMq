@@ -19,9 +19,9 @@ public class RabbitConfirmCallback implements RabbitTemplate.ConfirmCallback{
     /**
      * 发送到交换机上失败回调
      * 消息发送回调(判断是否发送到相应的交换机上)
-     * @param correlationData
-     * @param ack
-     * @param cause
+     * @param correlationData   消息唯一标识
+     * @param ack               消息确认结果
+     * @param cause             失败原因
      */
     @Override
     public void confirm(CorrelationData correlationData, boolean ack, String cause) {
