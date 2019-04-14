@@ -20,6 +20,12 @@ public interface TopicKeyInterface {
     //队列名
     String TOPIC_QUEUE_NAME_C = "TOPIC_QUEUE_C";
 
+    //持久化队列名
+    String TOPIC_DURABLE_QUEUE_NAME = "topic_DURABLE_QUEUE";
+
+    //持久化交换机名
+    String TOPIC_DURABLE_EXCHANGE_NAME = "topic_DURABLE_EXCHANGE";
+
     //交换机名
     String TOPIC_EXCHANGE_NAME = "TOPIC_EXCHANGE";
 

@@ -44,6 +44,27 @@ public class FanoutConfig {
     }
 
     /**
+     * 设置持久化fanout模式队列
+     * durable:是否持久化,默认是false,持久化队列：会被存储在磁盘上，当消息代理重启时仍然存在，暂存队列：当前连接有效
+     * exclusive:默认也是false，只能被当前创建的连接使用，而且当连接关闭后队列即被删除。此参考优先级高于durable
+     * autoDelete:是否自动删除，当没有生产者或者消费者使用此队列，该队列会自动删除。
+     * @return
+     */
+    @Bean
+    public Queue durableFanoutQueue(){
+        return new Queue(FanoutKeyInterface.FANOUT_DURABLE_QUEUE_NAME,true,true,false);
+    }
+
+    /**
+     * 设置持久化交换机
+     * @return
+     */
+    @Bean
+    public FanoutExchange durableFanoutExchange(){
+        return new FanoutExchange(FanoutKeyInterface.FANOUT_DURABLE_EXCHANGE_NAME,true,false);
+    }
+
+    /**
      * 设定交换机
      * @return
      */
@@ -83,5 +104,16 @@ public class FanoutConfig {
     @Bean
     public Binding bindingC(FanoutExchange fanoutExChange,Queue fanoutQueueC){
         return BindingBuilder.bind(fanoutQueueC).to(fanoutExChange);
+    }
+
+    /**
+     * 绑定持久化交换机
+     * @param durableFanoutExchange
+     * @param durableFanoutQueue
+     * @return
+     */
+    @Bean
+    public Binding bindingDurableFanout(FanoutExchange durableFanoutExchange,Queue durableFanoutQueue){
+        return BindingBuilder.bind(durableFanoutQueue).to(durableFanoutExchange);
     }
 }

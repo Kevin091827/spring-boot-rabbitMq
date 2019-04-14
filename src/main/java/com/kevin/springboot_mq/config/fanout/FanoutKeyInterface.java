@@ -20,6 +20,12 @@ public interface FanoutKeyInterface {
     //队列名
     String FANOUT_QUEUE_C_NAME = "fanout_queue_c";
 
+    //持久化队列
+    String FANOUT_DURABLE_QUEUE_NAME = "fanout_durable_queue";
+
+    //持久化交换机
+    String FANOUT_DURABLE_EXCHANGE_NAME = "fanout_durable_exchange";
+
     //交换机名
     String FANOUT_EXCHANGE_NAME = "fanout_exchange_name";
 

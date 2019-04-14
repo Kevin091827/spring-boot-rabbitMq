@@ -31,6 +31,23 @@ public class DirectConfig {
     }
 
     /**
+     * 设置持久化队列
+     * @return
+     */
+    @Bean
+    public Queue durableQueue(){
+        return new Queue(DirectKeyInterface.DIRECT_DURABLE_QUEUE_NAME,true,true,false);
+    }
+
+    /**
+     * 设置持久化交换机
+     * @return
+     */
+    public DirectExchange directExchangeDurable(){
+        return new DirectExchange(DirectKeyInterface.DIRECT_DURABLE_EXCHANGE_NAME,true,false);
+    }
+
+    /**
      * 设置交换机
      * @return
      */
@@ -48,5 +65,10 @@ public class DirectConfig {
     @Bean
     public Binding binding_direct(DirectExchange directExchange,Queue queue){
         return BindingBuilder.bind(queue).to(directExchange).with(DirectKeyInterface.DIRECT_KEY);
+    }
+
+    @Bean
+    public Binding binding_direct_Durable(DirectExchange directExchangeDurable,Queue durableQueue){
+        return BindingBuilder.bind(durableQueue).to(directExchangeDurable).with(DirectKeyInterface.DIRECT_KEY);
     }
 }
