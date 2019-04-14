@@ -149,3 +149,87 @@ spring.rabbitmq.cache.connection.mode=channel
     }
 ```
 ![在这里插入图片描述](https://img-blog.csdnimg.cn/20190413013404781.png)
+
+--------------------------------------------------更新----------------------------------------------
+
+#### 4.rabbitMQ消息确认机制
+当我们程序向rabbitMQ中间件发送消息时，如果程序没什么异常的话，一般都会成功发送消息
+但是，我们并不知道，消息是否成功发送到相应交换机的相应队列中，此时，我们需要用到消息确认机制，
+这也是rabbitMQ的一个功能点
+
+**1.消息发送确认 与 消息接收确认（ACK）**
+* 消息发送确认：
+   
+   当消息可能因为路由键不匹配或者发送不到指定交换机而导致无法发送到相应队列时
+   确认消息发送失败，相反，确认消息发送成功
+
+* 消息接收确认：
+    
+    1.消息通过 ACK 确认是否被正确接收，每个 Message 都要被确认（acknowledged），可以手动去 ACK 或自动 ACK
+    
+    2.自动确认会在消息发送给消费者后立即确认，但存在丢失消息的可能，如果消费端消费逻辑抛出异常，也就是消费端没有处理成功这条消息，那么就相当于丢失了消息
+    
+    3.如果消息已经被处理，但后续代码抛出异常，使用 Spring 进行管理的话消费端业务逻辑会进行回滚，这也同样造成了实际意义的消息丢失
+    
+    4.如果手动确认则当消费者调用 ack、nack、reject 几种方法进行确认，手动确认可以在业务失败后进行一些操作，如果消息未被 ACK 则会发送到下一个消费者
+    
+    5.如果某个服务忘记 ACK 了，则 RabbitMQ 不会再发送数据给它，因为 RabbitMQ 认为该服务的处理能力有限
+    
+    6.ACK 机制还可以起到限流作用，比如在接收到某条消息时休眠几秒钟
+    
+    7.消息确认模式有：
+    
+      AcknowledgeMode.NONE：自动确认
+      AcknowledgeMode.AUTO：根据情况确认
+      AcknowledgeMode.MANUAL：手动确认
+      
+**2.两个接口**
+
+**ConfirmCallback**
+
+实现ConfirmCallback接口实现消息发送到交换机的回调
+
+```java
+@Slf4j
+public class RabbitConfirmCallback implements RabbitTemplate.ConfirmCallback{
+    /**
+     * 发送到交换机上失败回调
+     * 消息发送回调(判断是否发送到相应的交换机上)
+     * @param correlationData
+     * @param ack
+     * @param cause
+     */
+    @Override
+    public void confirm(CorrelationData correlationData, boolean ack, String cause) {
+        if (ack) {
+            log.info("消息发送到exchange成功");
+        } else {
+            log.info("消息发送到exchange失败");
+        }
+    }
+}
+```
+
+**ReturnCallback**
+
+实现ReturnCallback接口实现消息失败回调，当消息路由不到指定队列时回调方法
+
+```java
+
+@Slf4j
+public class RabbitReturnCallback implements RabbitTemplate.ReturnCallback {
+    /**
+     * 发送到队列失败后回调
+     * 消息可以发送到相应交换机，但是没有相应路由键和队列绑定
+     * @param message
+     * @param i
+     * @param s
+     * @param s1
+     * @param s2
+     */
+    @Override
+    public void returnedMessage(Message message, int i, String s, String s1, String s2) {
+        log.info("消息发送失败");
+    }
+}
+```
