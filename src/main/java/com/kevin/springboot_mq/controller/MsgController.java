@@ -1,6 +1,8 @@
 package com.kevin.springboot_mq.controller;
 
+import com.kevin.springboot_mq.entity.User;
 import com.kevin.springboot_mq.message.Producer;
+import com.kevin.springboot_mq.service.RegisterService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Controller;
@@ -23,15 +25,17 @@ public class MsgController {
     @Autowired
     private Producer producer;
 
+    @Autowired
+    private RegisterService registerService;
+
     /**
      * 发送消息
      * @return
      */
     @GetMapping("/helloRabbitMQ")
     public String sendMsg(){
-        producer.send("hello world!");
-        //producer.sendOfFanout("hello!");
-        //producer.sendOfTopic("hello topic!");
+        User user = new User("kevin",12,"M");
+        //registerService.addUser(user);
         return "success";
     }
 

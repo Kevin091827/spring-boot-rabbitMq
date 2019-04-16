@@ -1,5 +1,7 @@
 package com.kevin.springboot_mq.message;
 
+import com.alibaba.fastjson.JSONObject;
+import com.fasterxml.jackson.databind.util.JSONPObject;
 import com.kevin.springboot_mq.config.direct.DirectKeyInterface;
 import com.kevin.springboot_mq.config.fanout.FanoutKeyInterface;
 import com.kevin.springboot_mq.config.topic.TopicKeyInterface;
@@ -29,7 +31,7 @@ public class Producer {
      * @param message
      */
     public void send(String message){
-        //rabbitTemplate.convertAndSend(DirectKeyInterface.DIRECT_EXCHANGE_NAME,DirectKeyInterface.DIRECT_KEY,message);
+        rabbitTemplate.convertAndSend(DirectKeyInterface.DIRECT_EXCHANGE_NAME,DirectKeyInterface.DIRECT_KEY,message);
        // rabbitTemplate.convertAndSend(DirectKeyInterface.DIRECT_EXCHANGE_NAME,"test",message);
         //rabbitTemplate.convertAndSend("test","test",message);
         log.info("消息发送成功：{}",message);
@@ -51,6 +53,15 @@ public class Producer {
     public void sendOfTopic(String message){
         rabbitTemplate.convertAndSend(TopicKeyInterface.TOPIC_EXCHANGE_NAME,TopicKeyInterface.TOPIC_KEY,message);
         log.info("消息发送成功：{}",message);
+    }
+
+    /**
+     * 发送对象
+     * @param object
+     */
+    public void sendObject(Object object){
+        String  json = JSONObject.toJSONString(object);
+        rabbitTemplate.convertAndSend(DirectKeyInterface.DIRECT_EXCHANGE_NAME,DirectKeyInterface.DIRECT_KEY,json);
     }
 
 }
