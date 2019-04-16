@@ -1,5 +1,6 @@
 package com.kevin.springboot_mq.message;
 
+import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.kevin.springboot_mq.config.direct.DirectKeyInterface;
 import com.kevin.springboot_mq.config.topic.TopicKeyInterface;
@@ -46,7 +47,9 @@ public class Consumer {
     @RabbitListener(queues = DirectKeyInterface.DIRECT_QUEUE_NAME)
     private void receiveObject(String json){
         log.info("接收到对象:{}"+json);
-        registerDao.addUser(json.toString());
+        User user = JSONObject.parseObject(json,User.class);
+        System.out.println(user.getSex()+user.getUserName());
+        registerDao.addUser(user);
     }
 
 }

@@ -19,7 +19,7 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface RegisterDao {
 
-    @Insert("insert into user_tb (_userName)values(#{userName})")
-    int addUser(String userName);
+    @Insert("insert into user_tb (_userName,_sex)values(#{user.userName},#{user.sex})")
+    int addUser(@Param("user") User user);
 
 }
