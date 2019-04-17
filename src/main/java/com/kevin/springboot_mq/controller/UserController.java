@@ -31,7 +31,7 @@ public class UserController {
 
     @GetMapping("/registerUser")
     public String registerUser(){
-        for(int i = 19;i<50;i++){
+        for(int i = 19;i<600;i++){
             registerService.addUser(new User("kevin",i,"M"));
         }
         return "success";
@@ -39,7 +39,7 @@ public class UserController {
 
     @GetMapping("/deleteUser")
     public String deleteUser(){
-        for (int i = 28;i<68;i++){
+        for (int i = 950;i<990;i++){
             registerService.deleteUser(i);
         }
         return "success";
