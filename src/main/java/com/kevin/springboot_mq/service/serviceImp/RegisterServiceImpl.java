@@ -27,8 +27,22 @@ public class RegisterServiceImpl implements RegisterService {
     @Autowired
     private Producer producer;
 
+    /**
+     * 增加user，发送要增加的user信息到消息队列（RabbitMQ）
+     * 从而起到流量削峰的作用
+     * @param user
+     */
     @Override
-    public void addUser(String userName) {
-        producer.sendObject(userName);
+    public void addUser(User user) {
+        producer.sendObject(user);
+    }
+
+    /**
+     * 删除user
+     * @param id
+     */
+    @Override
+    public void deleteUser(int id) {
+        producer.send(String.valueOf(id));
     }
 }

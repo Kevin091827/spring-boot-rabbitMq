@@ -31,7 +31,17 @@ public class UserController {
 
     @GetMapping("/registerUser")
     public String registerUser(){
-        producer.sendObject(new User("kevin",12,"M"));
+        for(int i = 19;i<50;i++){
+            registerService.addUser(new User("kevin",i,"M"));
+        }
+        return "success";
+    }
+
+    @GetMapping("/deleteUser")
+    public String deleteUser(){
+        for (int i = 28;i<68;i++){
+            registerService.deleteUser(i);
+        }
         return "success";
     }
 }

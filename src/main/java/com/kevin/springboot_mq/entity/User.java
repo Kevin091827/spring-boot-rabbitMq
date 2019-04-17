@@ -19,12 +19,12 @@ import java.io.Serializable;
 public class User implements Serializable {
 
     private String userName;
-    private int age;
+    private int id;
     private String sex;
 
-    public User(String userName, int age, String sex) {
+    public User(String userName, int id, String sex) {
         this.userName = userName;
-        this.age = age;
+        this.id = id;
         this.sex = sex;
     }
 }

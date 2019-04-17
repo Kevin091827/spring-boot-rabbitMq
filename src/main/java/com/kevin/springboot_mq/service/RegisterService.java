@@ -13,5 +13,15 @@ import com.kevin.springboot_mq.entity.User;
  */
 public interface RegisterService {
 
-    void addUser(String userName);
+    /**
+     * 增加user
+     * @param user
+     */
+    void addUser(User user);
+
+    /**
+     * 删除user
+     * @param id
+     */
+    void deleteUser(int id);
 }

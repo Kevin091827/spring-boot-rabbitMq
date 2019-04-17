@@ -48,8 +48,20 @@ public class Consumer {
     private void receiveObject(String json){
         log.info("接收到对象:{}"+json);
         User user = JSONObject.parseObject(json,User.class);
-        System.out.println(user.getSex()+user.getUserName());
         registerDao.addUser(user);
     }
+
+    /**
+     * 接收删除对象信息
+     * @param json
+     */
+   // @RabbitHandler
+   // @RabbitListener(queues = DirectKeyInterface.DIRECT_QUEUE_NAME)
+    public void receiveObjectDel(String json){
+        log.info("接收到的id："+json);
+        int id = Integer.parseInt(json);
+        registerDao.deleteUser(id);
+    }
+
 
 }
