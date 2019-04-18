@@ -28,6 +28,7 @@ import org.springframework.core.env.Environment;
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 import java.io.IOException;
+import java.util.function.Consumer;
 
 /**
  * @Description:    rabbitMq一些通用配置
@@ -152,8 +153,7 @@ public class RabbitMqConfig {
         container.setQueueNames(DirectKeyInterface.DIRECT_QUEUE_NAME);
         //手动确认
         container.setAcknowledgeMode(AcknowledgeMode.MANUAL);
-        container.setMessageListener(channelAwareMessageListener());
-       /*
+        //container.setMessageListener(channelAwareMessageListener());
         //消息处理
         container.setMessageListener((ChannelAwareMessageListener) (message, channel) -> {
             log.info("====接收到消息=====");
@@ -179,7 +179,7 @@ public class RabbitMqConfig {
                     //丢弃这条消息
                     try {
                         //最后一个参数是：是否重回队列
-                        channel.basicNack(message.getMessageProperties().getDeliveryTag(), false,true);
+                        channel.basicNack(message.getMessageProperties().getDeliveryTag(), false,false);
                         //拒绝消息
                         //channel.basicReject(message.getMessageProperties().getDeliveryTag(), true);
                         //消息被丢失
@@ -199,8 +199,7 @@ public class RabbitMqConfig {
                 channel.basicReject(message.getMessageProperties().getDeliveryTag(),false);
                 log.info("消息拒绝");
             }
-        });*/
-
+        });
         return container;
     }
 

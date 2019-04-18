@@ -111,11 +111,10 @@ public class Consumer {
         log.info("接收到的id："+json);
         int id = Integer.parseInt(json);
         registerDao.deleteUser(id);
-/*
         //<P>代码为在消费者中开启消息接收确认的手动ack</p>
         //<H>配置完成</H>
         //<P>可以开启全局配置</p>
-        if (map.get("error")!= null){
+        /*if (map.get("error")!= null){
             log.info("错误的消息");
             try {
                 //否认消息,拒接该消息重回队列
