@@ -114,7 +114,7 @@ public class Consumer {
         //<P>代码为在消费者中开启消息接收确认的手动ack</p>
         //<H>配置完成</H>
         //<P>可以开启全局配置</p>
-        /*if (map.get("error")!= null){
+        if (map.get("error")!= null){
             log.info("错误的消息");
             try {
                 //否认消息,拒接该消息重回队列
@@ -152,7 +152,7 @@ public class Consumer {
                 e1.printStackTrace();
             }
             log.info("消息消费失败：id：{}",message.getMessageProperties().getDeliveryTag());
-        }*/
+        }
     }
 
 }
