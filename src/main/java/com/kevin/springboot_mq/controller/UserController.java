@@ -39,7 +39,7 @@ public class UserController {
 
     @GetMapping("/deleteUser")
     public String deleteUser() throws InterruptedException {
-        for (int i = 990;i<1200;i++){
+        for (int i = 1290;i<1300;i++){
             //Thread.sleep(1000);
             registerService.deleteUser(i);
         }

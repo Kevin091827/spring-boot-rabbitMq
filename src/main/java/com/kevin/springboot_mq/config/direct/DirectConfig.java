@@ -39,10 +39,12 @@ public class DirectConfig {
         return new Queue(DirectKeyInterface.DIRECT_DURABLE_QUEUE_NAME,true,true,false);
     }
 
+
     /**
      * 设置持久化交换机
      * @return
      */
+    //@Bean
     public DirectExchange directExchangeDurable(){
         return new DirectExchange(DirectKeyInterface.DIRECT_DURABLE_EXCHANGE_NAME,true,false);
     }
@@ -51,7 +53,7 @@ public class DirectConfig {
      * 设置交换机
      * @return
      */
-    @Bean
+    //@Bean
     public DirectExchange directExchange(){
         return new DirectExchange(DirectKeyInterface.DIRECT_EXCHANGE_NAME);
     }
@@ -64,11 +66,17 @@ public class DirectConfig {
      */
     @Bean
     public Binding binding_direct(DirectExchange directExchange,Queue queue){
-        return BindingBuilder.bind(queue).to(directExchange).with(DirectKeyInterface.DIRECT_KEY);
+        return BindingBuilder.bind(queue)
+                             .to(directExchange)
+                             .with(DirectKeyInterface.DIRECT_KEY);
     }
 
     @Bean
     public Binding binding_direct_Durable(DirectExchange directExchangeDurable,Queue durableQueue){
-        return BindingBuilder.bind(durableQueue).to(directExchangeDurable).with(DirectKeyInterface.DIRECT_KEY);
+
+        return BindingBuilder.bind(durableQueue)
+                             .to(directExchangeDurable)
+                             .with(DirectKeyInterface.DIRECT_KEY);
     }
+
 }

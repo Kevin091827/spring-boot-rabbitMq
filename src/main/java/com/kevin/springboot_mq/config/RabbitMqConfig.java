@@ -1,6 +1,8 @@
 package com.kevin.springboot_mq.config;
 
 import com.kevin.springboot_mq.config.direct.DirectKeyInterface;
+import com.kevin.springboot_mq.message.Consumer;
+import com.kevin.springboot_mq.service.RegisterService;
 import com.rabbitmq.client.Channel;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.ImmediateAcknowledgeAmqpException;
@@ -16,6 +18,7 @@ import org.springframework.amqp.rabbit.listener.SimpleMessageListenerContainer;
 import org.springframework.amqp.rabbit.listener.api.ChannelAwareMessageListener;
 import org.springframework.amqp.support.AmqpHeaders;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
+import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
@@ -30,7 +33,6 @@ import javax.annotation.Resource;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.function.Consumer;
 
 /**
  * @Description:    rabbitMq一些通用配置
@@ -142,107 +144,115 @@ public class RabbitMqConfig {
         return factory;
     }
 
-    /**
-     * 消费者全局消息手动ACK确认(还没配置完成)
-     * @return
-     */
-    //@Bean
-    public SimpleMessageListenerContainer messageListenerContainer(){
-
-        SimpleMessageListenerContainer container = new SimpleMessageListenerContainer();
-        container.setExposeListenerChannel(true);
-        container.setConnectionFactory(connectionFactory());
-        //监听的队列（是一个String类型的可变参数,将监听的队列配置上来，可减少在消费者中代码量）
-        container.setQueueNames(DirectKeyInterface.DIRECT_QUEUE_NAME);
-        //手动确认
-        container.setAcknowledgeMode(AcknowledgeMode.MANUAL);
-        container.setMessageListener(channelAwareMessageListener());
-        /*
-        //消息处理
-        container.setMessageListener((ChannelAwareMessageListener) (message, channel) -> {
-            log.info("====接收到消息=====");
-            log.info(new String(message.getBody()));
-            //它会根据方法的执行情况来决定是否确认还是拒绝（是否重新入queue）
-                //1.抛出NullPointerException异常则重新入队列
-                    //throw new NullPointerException("消息消费失败");
-                //2.当抛出的异常是AmqpRejectAndDontRequeueException异常的时候，则消息会被拒绝，且requeue=false
-                    //throw new AmqpRejectAndDontRequeueException("消息消费失败");
-                //3.当抛出ImmediateAcknowledgeAmqpException异常，则消费者会被确认
-                    //throw new ImmediateAcknowledgeAmqpException("消息消费失败");
-            //消息手动弄ACK确认
-            if(message.getMessageProperties().getHeaders().get("error") == null){
-
-                try {
-                    //手动ack应答
-                    //告诉服务器收到这条消息 已经被我消费了 可以在队列删掉 这样以后就不会再发了
-                    // 否则消息服务器以为这条消息没处理掉 后续还会在发，true确认所有消费者获得的消息
-                    channel.basicAck(message.getMessageProperties().getDeliveryTag(),false);
-                    log.info("消息消费成功：id：{}",message.getMessageProperties().getDeliveryTag());
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    //丢弃这条消息
-                    try {
-                        //最后一个参数是：是否重回队列
-                        channel.basicNack(message.getMessageProperties().getDeliveryTag(), false,false);
-                        //拒绝消息
-                        //channel.basicReject(message.getMessageProperties().getDeliveryTag(), true);
-                        //消息被丢失
-                        //channel.basicReject(message.getMessageProperties().getDeliveryTag(), false);
-                        //消息被重新发送
-                        //channel.basicReject(message.getMessageProperties().getDeliveryTag(), true);
-                        //多条消息被重新发送
-                        //channel.basicNack(message.getMessageProperties().getDeliveryTag(), true, true);
-                    } catch (IOException e1) {
-                        e1.printStackTrace();
-                    }
-                    log.info("消息消费失败：id：{}",message.getMessageProperties().getDeliveryTag());
-                }
-            }else {
-                //处理错误消息，拒觉错误消息重新入队
-                channel.basicNack(message.getMessageProperties().getDeliveryTag(),false,false);
-                channel.basicReject(message.getMessageProperties().getDeliveryTag(),false);
-                log.info("消息拒绝");
-            }
-        });
-        */
-        return container;
-    }
-
-    @Bean
-    public MessageListener channelAwareMessageListener() {
-        ChannelAwareMessageListener channelAwareMessageListener = new ChannelAwareMessageListener() {
-
-            @Override
-            public void onMessage(Message message, Channel channel) throws Exception {
-                log.info("====接收到消息=====");
-                log.info(new String(message.getBody()));
-                if(message.getMessageProperties().getHeaders().get("error") == null){
-
-                    try {
-                        //手动ack应答
-                        //告诉服务器收到这条消息 已经被我消费了 可以在队列删掉 这样以后就不会再发了
-                        // 否则消息服务器以为这条消息没处理掉 后续还会在发，true确认所有消费者获得的消息
-                        channel.basicAck(message.getMessageProperties().getDeliveryTag(),false);
-                        log.info("消息消费成功：id：{}",message.getMessageProperties().getDeliveryTag());
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                        //丢弃这条消息
-                        try {
-                            //最后一个参数是：是否重回队列
-                            channel.basicNack(message.getMessageProperties().getDeliveryTag(), false,false);
-                        } catch (IOException e1) {
-                            e1.printStackTrace();
-                        }
-                        log.info("消息消费失败：id：{}",message.getMessageProperties().getDeliveryTag());
-                    }
-                }else {
-                    //处理错误消息，拒觉错误消息重新入队
-                    channel.basicNack(message.getMessageProperties().getDeliveryTag(),false,false);
-                    channel.basicReject(message.getMessageProperties().getDeliveryTag(),false);
-                    log.info("消息拒绝");
-                }
-            }
-        };
-        return channelAwareMessageListener;
-    }
+//    /**
+//     * 消费者全局消息手动ACK确认(还没配置完成)
+//     * @return
+//     */
+//   // @Bean
+//    public SimpleMessageListenerContainer messageListenerContainer(){
+//
+//        SimpleMessageListenerContainer container = new SimpleMessageListenerContainer();
+//        container.setExposeListenerChannel(true);
+//        container.setConnectionFactory(connectionFactory());
+//        //监听的队列（是一个String类型的可变参数,将监听的队列配置上来，可减少在消费者中代码量）
+//        container.setQueueNames(DirectKeyInterface.DIRECT_QUEUE_NAME);
+//        //手动确认
+//        container.setAcknowledgeMode(AcknowledgeMode.MANUAL);
+//        container.setMessageListener(channelAwareMessageListener());
+//
+//        /*
+//        //消息处理
+//        container.setMessageListener((ChannelAwareMessageListener) (message, channel) -> {
+//            log.info("====****接收到消息****=====");
+//            log.info(new String(message.getBody()));
+//            //它会根据方法的执行情况来决定是否确认还是拒绝（是否重新入queue）
+//                //1.抛出NullPointerException异常则重新入队列
+//                    //throw new NullPointerException("消息消费失败");
+//                //2.当抛出的异常是AmqpRejectAndDontRequeueException异常的时候，则消息会被拒绝，且requeue=false
+//                    //throw new AmqpRejectAndDontRequeueException("消息消费失败");
+//                //3.当抛出ImmediateAcknowledgeAmqpException异常，则消费者会被确认
+//                    //throw new ImmediateAcknowledgeAmqpException("消息消费失败");
+//            //消息手动弄ACK确认
+//            if(message.getMessageProperties().getHeaders().get("error") == null){
+//
+//                try {
+//
+//                    //手动ack应答
+//                    //告诉服务器收到这条消息 已经被我消费了 可以在队列删掉 这样以后就不会再发了
+//                    // 否则消息服务器以为这条消息没处理掉 后续还会在发，true确认所有消费者获得的消息
+//                    channel.basicAck(message.getMessageProperties().getDeliveryTag(),false);
+//                    log.info("***消息消费成功：id：{}****",message.getMessageProperties().getDeliveryTag());
+//
+//                } catch (IOException e) {
+//                    e.printStackTrace();
+//                    //丢弃这条消息
+//                    try {
+//                        //最后一个参数是：是否重回队列
+//                        channel.basicNack(message.getMessageProperties().getDeliveryTag(), false,false);
+//                        //拒绝消息
+//                        //channel.basicReject(message.getMessageProperties().getDeliveryTag(), true);
+//                        //消息被丢失
+//                        //channel.basicReject(message.getMessageProperties().getDeliveryTag(), false);
+//                        //消息被重新发送
+//                        //channel.basicReject(message.getMessageProperties().getDeliveryTag(), true);
+//                        //多条消息被重新发送
+//                        //channel.basicNack(message.getMessageProperties().getDeliveryTag(), true, true);
+//                    } catch (IOException e1) {
+//                        e1.printStackTrace();
+//                    }
+//                    log.info("****消息消费失败：id：{}****",message.getMessageProperties().getDeliveryTag());
+//                }
+//            }else {
+//                //处理错误消息，拒觉错误消息重新入队
+//                channel.basicNack(message.getMessageProperties().getDeliveryTag(),false,false);
+//                channel.basicReject(message.getMessageProperties().getDeliveryTag(),false);
+//                log.info("***消息拒绝***");
+//            }
+//        });
+//        */
+//        return container;
+//    }
+//
+//
+//    /**
+//     * 手动ack全局配置（暂时不配置）
+//     * @return
+//     */
+//    //@Bean
+//    public MessageListener channelAwareMessageListener() {
+//        ChannelAwareMessageListener channelAwareMessageListener = new ChannelAwareMessageListener() {
+//
+//            @Override
+//            public void onMessage(Message message, Channel channel) throws Exception {
+//                log.info("====1111接收到消息=====");
+//                log.info(new String(message.getBody()));
+//                if(message.getMessageProperties().getHeaders().get("error") == null){
+//
+//                    try {
+//                        //手动ack应答
+//                        //告诉服务器收到这条消息 已经被我消费了 可以在队列删掉 这样以后就不会再发了
+//                        // 否则消息服务器以为这条消息没处理掉 后续还会在发，true确认所有消费者获得的消息
+//                        channel.basicAck(message.getMessageProperties().getDeliveryTag(),false);
+//                        log.info("1111消息消费成功：id：{}",message.getMessageProperties().getDeliveryTag());
+//                    } catch (IOException e) {
+//                        e.printStackTrace();
+//                        //丢弃这条消息
+//                        try {
+//                            //最后一个参数是：是否重回队列
+//                            channel.basicNack(message.getMessageProperties().getDeliveryTag(), false,false);
+//                        } catch (IOException e1) {
+//                            e1.printStackTrace();
+//                        }
+//                        log.info("消息消费失败：id：{}",message.getMessageProperties().getDeliveryTag());
+//                    }
+//                }else {
+//                    //处理错误消息，拒觉错误消息重新入队
+//                    channel.basicNack(message.getMessageProperties().getDeliveryTag(),false,false);
+//                    channel.basicReject(message.getMessageProperties().getDeliveryTag(),false);
+//                    log.info("消息拒绝");
+//                }
+//            }
+//        };
+//        return channelAwareMessageListener;
+//    }
 }
