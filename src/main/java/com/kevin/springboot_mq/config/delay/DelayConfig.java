@@ -51,7 +51,7 @@ public class DelayConfig {
     @Bean
     public Queue deadLetterQueue() {
         Map<String,Object> args = new HashMap<>();
-        args.put("x-message-ttl", 3000);
+        args.put("x-message-ttl", DelayKeyInterface.EXPERI_TIME);
         args.put("x-dead-letter-exchange", DelayKeyInterface.DELAY_EXCHANGE);
         args.put("x-dead-letter-routing-key", DelayKeyInterface.DELAY_KEY);
         return new Queue(DelayKeyInterface.DELAY_QUEUE_NAME, true, false, false, args);

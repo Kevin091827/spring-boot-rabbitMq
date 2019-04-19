@@ -2,6 +2,7 @@ package com.kevin.springboot_mq.message;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
+import com.kevin.springboot_mq.config.delay.DelayKeyInterface;
 import com.kevin.springboot_mq.config.direct.DirectKeyInterface;
 import com.kevin.springboot_mq.config.topic.TopicKeyInterface;
 import com.kevin.springboot_mq.entity.User;
@@ -19,6 +20,7 @@ import org.springframework.messaging.handler.annotation.Headers;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.Map;
 
 /**
@@ -80,4 +82,22 @@ public class Consumer {
         AckUtils.ack(channel,message,map);
     }
 
+    /**
+     * 接收延迟消息
+     * @param channel
+     * @param json
+     * @param message
+     * @param map
+     */
+    @RabbitHandler
+    @RabbitListener(queues = DelayKeyInterface.DELAYMSG_RECEIVE_QUEUE_NAME)
+    public void receiveDelayMsg(Channel channel, String json, Message message,@Headers Map<String,Object> map){
+
+        log.info("接收到的消息"+json);
+        log.info("接收时间："+ LocalDateTime.now());
+        //<P>代码为在消费者中开启消息接收确认的手动ack</p>
+        //<H>配置完成</H>
+        //<P>可以开启全局配置</p>
+        AckUtils.ack(channel,message,map);
+    }
 }
