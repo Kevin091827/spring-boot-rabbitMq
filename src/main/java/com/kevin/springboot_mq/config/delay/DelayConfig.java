@@ -47,12 +47,17 @@ public class DelayConfig {
         return BindingBuilder.bind(repeatTradeQueue()).to(exchange()).with(DelayKeyInterface.DELAY_KEY);
     }
 
-    //死信队列
+    /**
+     * 死信队列
+     */
     @Bean
     public Queue deadLetterQueue() {
         Map<String,Object> args = new HashMap<>();
+        //消息过期时间
         args.put("x-message-ttl", DelayKeyInterface.EXPERI_TIME);
+        //消息过期后发到指定交换机
         args.put("x-dead-letter-exchange", DelayKeyInterface.DELAY_EXCHANGE);
+        //消息过期后附带指定路由键发到指定交换机上
         args.put("x-dead-letter-routing-key", DelayKeyInterface.DELAY_KEY);
         return new Queue(DelayKeyInterface.DELAY_QUEUE_NAME, true, false, false, args);
     }

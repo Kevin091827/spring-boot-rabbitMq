@@ -1,5 +1,6 @@
 package com.kevin.springboot_mq.config;
 
+import com.kevin.springboot_mq.config.delay.DelayRetryKeyInterface;
 import com.kevin.springboot_mq.config.direct.DirectKeyInterface;
 import com.kevin.springboot_mq.message.Consumer;
 import com.kevin.springboot_mq.service.RegisterService;
@@ -15,6 +16,7 @@ import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.connection.CorrelationData;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.rabbit.listener.SimpleMessageListenerContainer;
+import org.springframework.amqp.rabbit.listener.adapter.MessageListenerAdapter;
 import org.springframework.amqp.rabbit.listener.api.ChannelAwareMessageListener;
 import org.springframework.amqp.support.AmqpHeaders;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
@@ -143,6 +145,16 @@ public class RabbitMqConfig {
         factory.setPrefetchCount(env.getProperty("spring.rabbitmq.listener.prefetch",int.class));
         return factory;
     }
+
+    @Bean
+    SimpleMessageListenerContainer processContainer(ConnectionFactory connectionFactory) {
+        SimpleMessageListenerContainer container = new SimpleMessageListenerContainer();
+        container.setConnectionFactory(connectionFactory);
+        container.setQueueNames(DelayRetryKeyInterface.RETRY_CONSUME_QUEUE); // 监听
+        return container;
+    }
+
+
 
 //    /**
 //     * 消费者全局消息手动ACK确认(还没配置完成)
