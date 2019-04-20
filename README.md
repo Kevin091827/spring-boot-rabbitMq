@@ -532,26 +532,37 @@ public class RabbitReturnCallback implements RabbitTemplate.ReturnCallback {
  ### 二，springboot实现rabbitMQ延时队列
  #### 实现思路
  ###### RabbitMQ两大特性
+ 
  **RabbitMQ消息的死亡方式：**
+ 
  - 消息被拒绝，通过调用basic.reject或者basic.nack并且设置的requeue参数为false。
  - 消息设置了存活时间
  - 消息进入了一条已经达到最大长度的队列
  
  **Time-To-Live Extensions**
+ 
  rabbitmq允许我们为消息或者队列设置过期时间，也就是TTL，TTL的意思是一条消息在队列中最大的存活时间，单位是毫秒，当某条消息被设置了TTL或者当某条消息进入了设置了TTL的队列时，这条消息会在经过TTL秒后“死亡”，成为Dead Letter。如果既配置了消息的TTL，又配置了队列的TTL，那么较小的那个值会被取用。
+ 
+ 
  **Dead Letter Exchange**
+ 
  如果队列设置了Dead Letter Exchange（DLX），那么这些Dead Letter就会被重新publish到Dead Letter Exchange，通过Dead Letter Exchange路由到其他队列
  
  ##### 实现流程
  * **延迟消费**
+ 
  生产者产生的消息首先会进入缓冲队列（图中红色队列）。通过RabbitMQ提供的TTL扩展，这些消息会被设置过期时间，也就是延迟消费的时间。等消息过期之后，这些消息会通过配置好的DLX转发到实际消费队列（图中蓝色队列），以此达到延迟消费的效果。
+ 
  ![在这里插入图片描述](https://img-blog.csdnimg.cn/20190419213745548.png)
  
  * **延迟重试**
+ 
  消费者发现该消息处理出现了异常，比如是因为网络波动引起的异常。那么如果不等待一段时间，直接就重试的话，很可能会导致在这期间内一直无法成功，造成一定的资源浪费。那么我们可以将其先放在缓冲队列中（图中红色队列），等消息经过一段的延迟时间后再次进入实际消费队列中（图中蓝色队列），此时由于已经过了“较长”的时间了，异常的一些波动通常已经恢复，这些消息可以被正常地消费。
+ 
  ![在这里插入图片描述](https://img-blog.csdnimg.cn/20190419213834279.png)
  
  ##### springboot实现rabbitMQ延迟消费
+ 
  延迟消费相关配置
  ```java
  @Configuration
@@ -634,6 +645,7 @@ public class RabbitReturnCallback implements RabbitTemplate.ReturnCallback {
      }
  ```
  结果：
+ 
  ![在这里插入图片描述](https://img-blog.csdnimg.cn/20190420011059332.png)
  
  
