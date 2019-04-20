@@ -356,5 +356,289 @@ public class RabbitReturnCallback implements RabbitTemplate.ReturnCallback {
         }
 ```
 
+ #### 6.rabbitMQ消费者消息手动ACK确认
+ 
+ ##### 1.ACK机制：消息确认机制
+ **1.作用：** 
+ * 确认消息是否被消费者消费，消息通过ACK机制确认是否被正确接收，每个消息都要被确认。
+ * 默认情况下，一个消息被消费者正确消费就会从队列中移除
+ 
+ **2.ACK确认模式**
+ * **AcknowledgeMode.NONE ：不确认**
+ 		**1**. 默认所有消息消费成功，会不断的向消费者推送消息
+ 		**2**. 因为rabbitMq认为所有消息都被消费成功，所以队列中不在存有消息，消息存在丢失的危险
+ * **AcknowledgeMode.AUTO：自动确认**
+ 		**1**. 由spring-rabbit依据消息处理逻辑是否抛出异常自动发送ack（无异常）或nack（异常）到server端。				      存在丢失消息的可能，如果消费端消费逻辑抛出异常，也就是消费端没有处理成功这条消息，那么就相当于丢失了消息
+ 如果消息已经被处理，但后续代码抛出异常，使用 Spring 进行管理的话消费端业务逻辑会进行回滚，这也同样造成了实际意义的消息丢失
+ 		**2**. 使用自动确认模式时，需要考虑的另一件事是消费者过载
+ * **AcknowledgeMode.MANUAL：手动确认**
+ 		**1**. 手动确认则当消费者调用 ack、nack、reject 几种方法进行确认，手动确认可以在业务失败后进行一些操作，如果消息未被 ACK 则会发送到下一个消费者
+ 		**2**. 手动确认模式可以使用 prefetch，限制通道上未完成的（“正在进行中的”）发送的数量
+ 
+ **3. 忘记ACK确认**
+ 忘记通过basicAck返回确认信息是常见的错误。这个错误非常严重，将导致消费者客户端退出或者关闭后，消息会被退回RabbitMQ服务器，这会使RabbitMQ服务器内存爆满，而且RabbitMQ也不会主动删除这些被退回的消息。只要程序还在运行，没确认的消息就一直是 Unacked 状态，无法被 RabbitMQ 重新投递。更厉害的是，RabbitMQ 消息消费并没有超时机制，也就是说，程序不重启，消息就永远是 Unacked 状态。处理运维事件时不要忘了这些 Unacked 状态的消息。当程序关闭时（实际只要 消费者 关闭就行），消息会恢复为 Ready 状态。
+ 
+ ##### 2.局部消息确认
+ **开启手动ack确认**
+ ```application
+ #消息确认机制 --- 是否开启手ack动确认模式
+ spring.rabbitmq.listener.direct.acknowledge-mode=manual
+ #消息确认机制 --- 是否开启手ack动确认模式
+ spring.rabbitmq.listener.simple.acknowledge-mode=manual
+ ```
+ 
+ **配置消费者**
+ ```java
+ @RabbitHandler
+     @RabbitListener(queues = DirectKeyInterface.DIRECT_QUEUE_NAME)
+     public void receiveObjectDel(Channel channel, String json, Message message,@Headers Map<String,Object> map){
+ 
+         log.info("接收到的id："+json);
+         int id = Integer.parseInt(json);
+         registerDao.deleteUser(id);
+ 
+         //<P>代码为在消费者中开启消息接收确认的手动ack</p>
+         //<H>配置完成</H>
+         //<P>可以开启全局配置</p>
+         if (map.get("error")!= null){
+             log.info("错误的消息");
+             try {
+                 //否认消息,拒接该消息重回队列
+                 channel.basicNack((Long)map.get(AmqpHeaders.DELIVERY_TAG),false,false);
+                 return;
+             } catch (IOException e) {
+                 e.printStackTrace();
+             }
+         }
+         //手动ACK
+         //默认情况下如果一个消息被消费者所正确接收则会被从队列中移除
+         //如果一个队列没被任何消费者订阅，那么这个队列中的消息会被 Cache（缓存），
+         //当有消费者订阅时则会立即发送，当消息被消费者正确接收时，就会被从队列中移除
+         try {
+             //手动ack应答
+             //告诉服务器收到这条消息 已经被我消费了 可以在队列删掉 这样以后就不会再发了
+             // 否则消息服务器以为这条消息没处理掉 后续还会在发，true确认所有消费者获得的消息
+             channel.basicAck(message.getMessageProperties().getDeliveryTag(),false);
+             log.info("消息消费成功：id：{}",message.getMessageProperties().getDeliveryTag());
+         } catch (IOException e) {
+             e.printStackTrace();
+             //丢弃这条消息
+             try {
+                 //最后一个参数是：是否重回队列
+                 channel.basicNack(message.getMessageProperties().getDeliveryTag(), false,false);
+                 //拒绝消息
+                 //channel.basicReject(message.getMessageProperties().getDeliveryTag(), true);
+                 //消息被丢失
+                 //channel.basicReject(message.getMessageProperties().getDeliveryTag(), false);
+                 //消息被重新发送
+                 //channel.basicReject(message.getMessageProperties().getDeliveryTag(), true);
+                 //多条消息被重新发送
+                 //channel.basicNack(message.getMessageProperties().getDeliveryTag(), true, true);
+             } catch (IOException e1) {
+                 e1.printStackTrace();
+             }
+             log.info("消息消费失败：id：{}",message.getMessageProperties().getDeliveryTag());
+         }
+     }
+ ```
+ ##### 3.全局消息确认
+ 
+发现一个问题，如果全局配置消费者消息ACk确认，会出现一个问题，就是有部分消息在没有被监听到的情况下可能会因为被消费掉而从队列中
+ 移除，从而没有执行到业务代码，所以暂时还是局部在消费者配置
+ ```java
+     /**
+      * 消费者全局消息手动ACK确认(还没配置完成)
+      * @return
+      */
+     @Bean
+     public SimpleMessageListenerContainer messageListenerContainer(){
+ 
+         SimpleMessageListenerContainer container = new SimpleMessageListenerContainer();
+         container.setConnectionFactory(connectionFactory());
+         //监听的队列（是一个String类型的可变参数,将监听的队列配置上来，可减少在消费者中代码量）
+         container.setQueueNames(DirectKeyInterface.DIRECT_QUEUE_NAME);
+         //手动确认
+         container.setAcknowledgeMode(AcknowledgeMode.MANUAL);
+         container.setMessageListener(channelAwareMessageListener());
+     
+         //消息处理
+         container.setMessageListener((ChannelAwareMessageListener) (message, channel) -> {
+             log.info("====接收到消息=====");
+             log.info(new String(message.getBody()));
+             //它会根据方法的执行情况来决定是否确认还是拒绝（是否重新入queue）
+                 //1.抛出NullPointerException异常则重新入队列
+                     //throw new NullPointerException("消息消费失败");
+                 //2.当抛出的异常是AmqpRejectAndDontRequeueException异常的时候，则消息会被拒绝，且requeue=false
+                     //throw new AmqpRejectAndDontRequeueException("消息消费失败");
+                 //3.当抛出ImmediateAcknowledgeAmqpException异常，则消费者会被确认
+                     //throw new ImmediateAcknowledgeAmqpException("消息消费失败");
+             //消息手动弄ACK确认
+             if(message.getMessageProperties().getHeaders().get("error") == null){
+ 
+                 try {
+                     //手动ack应答
+                     //告诉服务器收到这条消息 已经被我消费了 可以在队列删掉 这样以后就不会再发了
+                     // 否则消息服务器以为这条消息没处理掉 后续还会在发，true确认所有消费者获得的消息
+                     channel.basicAck(message.getMessageProperties().getDeliveryTag(),false);
+                     log.info("消息消费成功：id：{}",message.getMessageProperties().getDeliveryTag());
+                 } catch (IOException e) {
+                     e.printStackTrace();
+                     //丢弃这条消息
+                     try {
+                         //最后一个参数是：是否重回队列
+                         channel.basicNack(message.getMessageProperties().getDeliveryTag(), false,true);
+                         //拒绝消息
+                         //channel.basicReject(message.getMessageProperties().getDeliveryTag(), true);
+                         //消息被丢失
+                         //channel.basicReject(message.getMessageProperties().getDeliveryTag(), false);
+                         //消息被重新发送
+                         //channel.basicReject(message.getMessageProperties().getDeliveryTag(), true);
+                         //多条消息被重新发送
+                         //channel.basicNack(message.getMessageProperties().getDeliveryTag(), true, true);
+                     } catch (IOException e1) {
+                         e1.printStackTrace();
+                     }
+                     log.info("消息消费失败：id：{}",message.getMessageProperties().getDeliveryTag());
+                 }
+             }else {
+                 //处理错误消息，拒觉错误消息重新入队
+                 channel.basicNack(message.getMessageProperties().getDeliveryTag(),false,false);
+                 channel.basicReject(message.getMessageProperties().getDeliveryTag(),false);
+                 log.info("消息拒绝");
+             }
+         });
+ 
+         return container;
+     }
+ ```
+ 我已经抽象出一个工具类来负责消费者手动ACK确认
+
+
+ #### 7.RabbitMQ延时消费
+ 
+ ##### 应用场景
+ - **延迟消费**:
+ 
+ 比如： 用户生成订单之后，需要过一段时间校验订单的支付状态，如果订单仍未支付则需要及时地关闭订单。
+ 
+ 用户注册成功之后，需要过一段时间比如一周后校验用户的使用情况，如果发现用户活跃度较低，则发送邮件或者短信来提醒用户使用。
+ 
+ - **延迟重试**：
+ 
+ 比如消费者从队列里消费消息时失败了，但是想要延迟一段时间后自动重试。
+ 
+ 如果不使用延迟队列，那么我们只能通过一个轮询扫描程序去完成。这种方案既不优雅，也不方便做成统一的服务便于开发人员使用。但是使用延迟队列的话，我们就可以轻而易举地完成。
+ 
+ ### 二，springboot实现rabbitMQ延时队列
+ #### 实现思路
+ ###### RabbitMQ两大特性
+ **RabbitMQ消息的死亡方式：**
+ - 消息被拒绝，通过调用basic.reject或者basic.nack并且设置的requeue参数为false。
+ - 消息设置了存活时间
+ - 消息进入了一条已经达到最大长度的队列
+ 
+ **Time-To-Live Extensions**
+ rabbitmq允许我们为消息或者队列设置过期时间，也就是TTL，TTL的意思是一条消息在队列中最大的存活时间，单位是毫秒，当某条消息被设置了TTL或者当某条消息进入了设置了TTL的队列时，这条消息会在经过TTL秒后“死亡”，成为Dead Letter。如果既配置了消息的TTL，又配置了队列的TTL，那么较小的那个值会被取用。
+ **Dead Letter Exchange**
+ 如果队列设置了Dead Letter Exchange（DLX），那么这些Dead Letter就会被重新publish到Dead Letter Exchange，通过Dead Letter Exchange路由到其他队列
+ 
+ ##### 实现流程
+ * **延迟消费**
+ 生产者产生的消息首先会进入缓冲队列（图中红色队列）。通过RabbitMQ提供的TTL扩展，这些消息会被设置过期时间，也就是延迟消费的时间。等消息过期之后，这些消息会通过配置好的DLX转发到实际消费队列（图中蓝色队列），以此达到延迟消费的效果。
+ ![在这里插入图片描述](https://img-blog.csdnimg.cn/20190419213745548.png)
+ 
+ * **延迟重试**
+ 消费者发现该消息处理出现了异常，比如是因为网络波动引起的异常。那么如果不等待一段时间，直接就重试的话，很可能会导致在这期间内一直无法成功，造成一定的资源浪费。那么我们可以将其先放在缓冲队列中（图中红色队列），等消息经过一段的延迟时间后再次进入实际消费队列中（图中蓝色队列），此时由于已经过了“较长”的时间了，异常的一些波动通常已经恢复，这些消息可以被正常地消费。
+ ![在这里插入图片描述](https://img-blog.csdnimg.cn/20190419213834279.png)
+ 
+ ##### springboot实现rabbitMQ延迟消费
+ 延迟消费相关配置
+ ```java
+ @Configuration
+ public class DelayConfig {
+ 
+     /**
+      * 延时交换机 --- 交换机用于重新分配队列（接收死信队列中的过期消息，将其转发到需要延迟消息的模块队列）
+      * @return
+      */
+     @Bean
+     public DirectExchange exchange() {
+         return new DirectExchange(DelayKeyInterface.DELAY_EXCHANGE);
+     }
+ 
+     /**
+      * 实际消费队列
+      * 用于延时消费的队列
+      */
+     @Bean
+     public Queue repeatTradeQueue() {
+         Queue queue = new Queue(DelayKeyInterface.DELAYMSG_RECEIVE_QUEUE_NAME,true,false,false);
+         return queue;
+     }
+ 
+     /**
+      * 绑定交换机并指定routing key（死信队列绑定延迟交换机和实际消费队列绑定延迟交换机的路由键一致）
+      * @return
+      */
+     @Bean
+     public Binding  repeatTradeBinding() {
+         return BindingBuilder.bind(repeatTradeQueue()).to(exchange()).with(DelayKeyInterface.DELAY_KEY);
+     }
+ 
+     //死信队列
+     @Bean
+     public Queue deadLetterQueue() {
+         Map<String,Object> args = new HashMap<>();
+         args.put("x-message-ttl", DelayKeyInterface.EXPERI_TIME);
+         args.put("x-dead-letter-exchange", DelayKeyInterface.DELAY_EXCHANGE);
+         args.put("x-dead-letter-routing-key", DelayKeyInterface.DELAY_KEY);
+         return new Queue(DelayKeyInterface.DELAY_QUEUE_NAME, true, false, false, args);
+     }
+ 
+ }
+ 
+ ```
+ 
+ 发送消息
+ ```java
+     /**
+      * 发送延迟消息
+      * @return
+      */
+     @GetMapping("/send")
+     public String sendDelayMsg(){
+         rabbitTemplate.convertAndSend(DelayKeyInterface.DELAY_QUEUE_NAME,"hello");
+         log.info("发送时间："+ LocalDateTime.now());
+         return "success";
+     }
+ ```
+ 接收延迟消息：
+ ```java
+     /**
+      * 接收延迟消息
+      * @param channel
+      * @param json
+      * @param message
+      * @param map
+      */
+     @RabbitHandler
+     @RabbitListener(queues = DelayKeyInterface.DELAYMSG_RECEIVE_QUEUE_NAME)
+     public void receiveDelayMsg(Channel channel, String json, Message message,@Headers Map<String,Object> map){
+ 
+         log.info("接收到的消息"+json);
+         log.info("接收时间："+ LocalDateTime.now());
+         //<P>代码为在消费者中开启消息接收确认的手动ack</p>
+         //<H>配置完成</H>
+         //<P>可以开启全局配置</p>
+         AckUtils.ack(channel,message,map);
+     }
+ ```
+ 结果：
+ ![在这里插入图片描述](https://img-blog.csdnimg.cn/20190420011059332.png)
+ 
+ 
+
+
+
 
 
