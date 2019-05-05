@@ -44,7 +44,7 @@ public class DirectConfig {
      * 设置持久化交换机
      * @return
      */
-    //@Bean
+    @Bean
     public DirectExchange directExchangeDurable(){
         return new DirectExchange(DirectKeyInterface.DIRECT_DURABLE_EXCHANGE_NAME,true,false);
     }
@@ -53,7 +53,7 @@ public class DirectConfig {
      * 设置交换机
      * @return
      */
-    //@Bean
+    @Bean
     public DirectExchange directExchange(){
         return new DirectExchange(DirectKeyInterface.DIRECT_EXCHANGE_NAME);
     }
